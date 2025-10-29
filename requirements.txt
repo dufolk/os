@@ -1,0 +1,24 @@
+# Python 依赖包列表
+# 智能 Shell 助手项目
+
+# 注意: 以下依赖需要根据你选择的大模型来安装
+# 如果使用 OpenAI API，取消注释下面这行:
+# openai>=1.0.0
+
+# 如果使用 Anthropic Claude API，取消注释下面这行:
+# anthropic>=0.18.0
+
+# 如果使用其他大模型（如通义千问、文心一言等），请添加对应的 SDK
+
+# 基础依赖（已经是 Python 标准库，无需安装）
+# - json
+# - os
+# - sys
+# - subprocess
+# - platform
+# - datetime
+# - argparse
+
+# 可选依赖
+# colorama>=0.4.6  # Windows 下支持彩色输出（可选）
+# requests>=2.31.0  # 如果需要自定义 HTTP 请求

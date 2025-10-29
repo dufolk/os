@@ -1,0 +1,12 @@
+{
+  "model_name": "gpt-4",
+  "temperature": 0.3,
+  "max_tokens": 1000,
+  "command_timeout": 30,
+  "auto_confirm": false,
+  "max_history_records": 100,
+  "enable_dangerous_command_check": true,
+  "allow_destructive_commands": false,
+  "show_warnings": true,
+  "color_output": true
+}
