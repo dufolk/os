@@ -26,10 +26,11 @@ class Config:
         self.config_file = config_file or 'config.json'
 
         # LLM 相关配置
-        self.api_key = os.environ.get('OPENAI_API_KEY', '')  # 从环境变量读取
+        # 优先使用 DASHSCOPE_API_KEY（通义千问），其次使用 OPENAI_API_KEY
+        self.api_key = os.environ.get('DASHSCOPE_API_KEY') or os.environ.get('OPENAI_API_KEY', '')
         self.api_base = os.environ.get('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        self.model_name = 'gpt-4'  # 默认模型
-        self.temperature = 0.3  # 温度参数，越低越确定
+        self.model_name = 'qwen-plus'  # 默认模型（通义千问）
+        self.temperature = 0.05  # 温度参数，越低越确定
         self.max_tokens = 1000  # 最大token数
 
         # 命令执行配置

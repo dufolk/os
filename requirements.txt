@@ -22,3 +22,9 @@
 # 可选依赖
 # colorama>=0.4.6  # Windows 下支持彩色输出（可选）
 # requests>=2.31.0  # 如果需要自定义 HTTP 请求
+
+# GUI 依赖
+PyQt6>=6.4.0  # GUI 界面框架
+
+# 通义千问 API 依赖
+dashscope>=1.14.0  # 阿里云通义千问 SDK

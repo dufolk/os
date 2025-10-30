@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 LLM 接口模块
-这个文件需要你来完成大模型调用的具体实现
+使用通义千问（Qwen）大模型
 """
 
 from typing import Dict, List, Optional
+import dashscope
+import json
 
 
 class LLMInterface:
@@ -19,9 +21,10 @@ class LLMInterface:
             config: 配置对象
         """
         self.config = config
-        # TODO: 在这里初始化你的大模型客户端
-        # 例如: self.client = OpenAI(api_key=config.api_key)
-        pass
+        # 设置通义千问 API Key
+        dashscope.api_key = config.api_key
+        # 设置模型名称（可以在 config 中配置）
+        self.model_name = getattr(config, 'model_name', 'qwen-turbo')
 
     def natural_language_to_command(
         self,
@@ -73,33 +76,69 @@ class LLMInterface:
         TODO: 请实现这个函数！
         """
 
-        # ===== 以下是示例代码，你需要替换成真实的大模型调用 =====
+        try:
+            # 构建系统提示词
+            system_prompt = self._build_system_prompt(system_info)
 
-        # 示例: 构建系统提示词
-        system_prompt = self._build_system_prompt(system_info)
+            # 构建用户提示词（包含上下文）
+            user_prompt = self._build_user_prompt(user_input, context)
 
-        # 示例: 构建用户提示词（包含上下文）
-        user_prompt = self._build_user_prompt(user_input, context)
+            # 调用通义千问 API
+            response = dashscope.Generation.call(
+                model=self.model_name,
+                messages=[
+                    {'role': 'system', 'content': system_prompt},
+                    {'role': 'user', 'content': user_prompt}
+                ],
+                result_format='message',  # 设置返回格式
+                temperature=0.3,  # 降低随机性，使输出更确定
+            )
 
-        # TODO: 调用你的大模型 API
-        # 例如:
-        # response = self.client.chat.completions.create(
-        #     model="gpt-4",
-        #     messages=[
-        #         {"role": "system", "content": system_prompt},
-        #         {"role": "user", "content": user_prompt}
-        #     ]
-        # )
-        #
-        # command_text = response.choices[0].message.content
+            # 检查响应状态
+            if response.status_code == 200:
+                # 提取返回内容
+                result_text = response.output.choices[0].message.content
+                
+                # 解析 JSON 响应
+                result = parse_llm_json_response(result_text)
+                
+                # 确保返回格式正确
+                if 'command' not in result:
+                    return {
+                        'command': 'echo "LLM 未返回有效命令"',
+                        'explanation': '大模型返回格式错误',
+                        'warnings': ['返回格式不正确'],
+                        'error': 'Invalid response format'
+                    }
+                
+                # 添加 error 字段（如果不存在）
+                if 'error' not in result:
+                    result['error'] = None
+                
+                # 确保 warnings 字段存在
+                if 'warnings' not in result:
+                    result['warnings'] = []
+                
+                return result
+            else:
+                # API 调用失败
+                error_msg = f"API 调用失败: {response.code} - {response.message}"
+                return {
+                    'command': 'echo "API 调用失败"',
+                    'explanation': error_msg,
+                    'warnings': [],
+                    'error': error_msg
+                }
 
-        # 临时返回示例（你需要替换）
-        return {
-            'command': 'echo "请在 llm_interface.py 中实现大模型调用"',
-            'explanation': '这是一个占位符命令，请完成 natural_language_to_command 函数',
-            'warnings': ['LLM接口尚未实现'],
-            'error': None
-        }
+        except Exception as e:
+            # 捕获所有异常
+            error_msg = f"LLM 调用出错: {str(e)}"
+            return {
+                'command': 'echo "LLM 调用出错"',
+                'explanation': error_msg,
+                'warnings': [],
+                'error': error_msg
+            }
 
     def _build_system_prompt(self, system_info: Optional[Dict]) -> str:
         """
@@ -113,19 +152,35 @@ class LLMInterface:
         """
         platform = system_info.get('platform', 'unknown') if system_info else 'unknown'
 
+        shell_type = system_info.get('shell', 'unknown') if system_info else 'unknown'
+        
+        # 根据 Shell 类型提供不同的示例
+        if shell_type == 'PowerShell':
+            example_cmd = 'Get-ChildItem'
+            example_explanation = '列出当前目录下所有文件和文件夹'
+        elif shell_type == 'cmd':
+            example_cmd = 'dir'
+            example_explanation = '显示当前目录下的文件和文件夹'
+        else:
+            example_cmd = 'ls -la'
+            example_explanation = '列出当前目录下所有文件（包括隐藏文件）的详细信息'
+        
         prompt = f"""你是一个专业的 Shell 命令助手。你的任务是将用户的自然语言描述转换为准确的Shell命令。
 
 当前系统信息:
 - 操作系统: {platform}
-- Shell: {system_info.get('shell', 'unknown') if system_info else 'unknown'}
+- Shell: {shell_type}
 - 当前目录: {system_info.get('current_dir', 'unknown') if system_info else 'unknown'}
 
 请遵循以下规则:
 1. 只返回命令本身，不要有多余的解释文字在命令中
-2. 确保命令在 {platform} 系统上可以执行
-3. 如果任务不明确，返回最常用的命令
-4. 如果命令可能有危险（如删除文件），请在 warnings 中说明
-5. 返回格式必须是 JSON:
+2. 确保命令在 {platform} 系统的 {shell_type} 中可以执行
+3. 如果是 PowerShell，使用 PowerShell 命令（如 Get-ChildItem, Get-Process 等）
+4. 如果是 cmd，使用 CMD 命令（如 dir, tasklist 等）
+5. 如果是 bash/zsh，使用 Unix 命令（如 ls, ps 等）
+6. 如果任务不明确，返回最常用的命令
+7. 如果命令可能有危险（如删除文件），请在 warnings 中说明
+8. 返回格式必须是 JSON:
    {{
        "command": "实际的shell命令",
        "explanation": "命令的中文解释",
@@ -134,7 +189,7 @@ class LLMInterface:
 
 示例:
 用户: "显示当前目录下的所有文件"
-返回: {{"command": "ls -la", "explanation": "列出当前目录下所有文件（包括隐藏文件）的详细信息", "warnings": []}}
+返回: {{"command": "{example_cmd}", "explanation": "{example_explanation}", "warnings": []}}
 """
         return prompt
 

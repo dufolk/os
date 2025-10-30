@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "2025-10-30T09:34:07.240946",
+    "user_input": "显示当前目录文件",
+    "command": "Get-ChildItem",
+    "status": "error",
+    "output": "",
+    "error": "'Get-ChildItem' 不是内部或外部命令，也不是可运行的程序\n或批处理文件。",
+    "return_code": 1
+  },
+  {
+    "timestamp": "2025-10-30T09:37:29.603719",
+    "user_input": "显示当前目录文件",
+    "command": "Get-ChildItem",
+    "status": "success",
+    "output": "目录: C:\\Users\\NUC\\os\n\n\nMode                 LastWriteTime         Length Name                                                                                                                                                                                                                                                                                               \n----                 -------------         ------ ----                                                                                  ",
+    "error": "",
+    "return_code": 0
+  },
+  {
+    "timestamp": "2025-10-30T09:37:51.393080",
+    "user_input": "创建一个x文件夹",
+    "command": "New-Item -Path .\\x -ItemType Directory",
+    "status": "success",
+    "output": "目录: C:\\Users\\NUC\\os\n\n\nMode                 LastWriteTime         Length Name                                                                                                                                                                                                                                                                                               \n----                 -------------         ------ ----                                                                                  ",
+    "error": "",
+    "return_code": 0
+  },
+  {
+    "timestamp": "2025-10-30T09:38:31.842250",
+    "user_input": "复制成y文件夹并删除x文件夹",
+    "command": "Copy-Item -Path .\\x -Destination .\\y -Recurse; Remove-Item -Path .\\x -Recurse",
+    "status": "success",
+    "output": "",
+    "error": "",
+    "return_code": 0
+  }
+]

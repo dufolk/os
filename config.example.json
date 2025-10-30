@@ -1,5 +1,5 @@
 {
-  "model_name": "gpt-4",
+  "model_name": "qwen-turbo",
   "temperature": 0.3,
   "max_tokens": 1000,
   "command_timeout": 30,
@@ -8,5 +8,6 @@
   "enable_dangerous_command_check": true,
   "allow_destructive_commands": false,
   "show_warnings": true,
-  "color_output": true
+  "color_output": true,
+  "comment": "可选模型: qwen-turbo (快速), qwen-plus (平衡), qwen-max (最强)"
 }

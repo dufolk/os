@@ -57,13 +57,27 @@ class CommandExecutor:
         exec_timeout = timeout if timeout is not None else self.timeout
 
         try:
-            # 根据操作系统选择Shell
+            # 根据操作系统选择Shell和编码
             if self.platform == 'Windows':
-                shell_cmd = command
-                use_shell = True
+                # 检测当前使用的 Shell
+                shell_type = self._get_shell_type()
+                
+                if shell_type == 'PowerShell':
+                    # 使用 PowerShell 执行
+                    shell_cmd = ['powershell.exe', '-Command', command]
+                    use_shell = False
+                else:
+                    # 使用 CMD 执行
+                    shell_cmd = command
+                    use_shell = True
+                
+                # Windows 使用 GBK 编码（中文 Windows 默认编码）
+                encoding = 'gbk'
             else:
                 shell_cmd = command
                 use_shell = True
+                # Linux/macOS 使用 UTF-8
+                encoding = 'utf-8'
 
             # 执行命令
             process = subprocess.Popen(
@@ -72,8 +86,8 @@ class CommandExecutor:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                encoding='utf-8',
-                errors='replace'
+                encoding=encoding,
+                errors='replace'  # 遇到无法解码的字符时替换
             )
 
             # 等待命令完成

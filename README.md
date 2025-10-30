@@ -11,21 +11,25 @@
 - ✅ **历史记录**: 保存命令执行历史，支持查询和导出
 - ✅ **交互模式**: 支持交互式对话和单命令模式
 - ✅ **上下文记忆**: 记住之前的命令，提供更智能的建议
+- ✅ **图形界面**: 提供基于 PyQt6 的现代化 GUI 界面（适合演示）
 
 ## 项目结构
 
 ```
 os/
 ├── src/
-│   ├── main.py              # 主程序入口
+│   ├── main.py              # 命令行主程序入口
+│   ├── gui_main.py          # GUI 主程序（新增）
 │   ├── llm_interface.py     # LLM 接口（需要完成）
 │   ├── command_executor.py  # 命令执行模块
 │   ├── history_manager.py   # 历史记录管理
 │   └── config.py            # 配置管理
+├── run_gui.py              # GUI 启动器（新增）
 ├── requirements.txt         # 依赖包
 ├── config.json             # 配置文件（首次运行后生成）
 ├── shell_history.json      # 历史记录（首次运行后生成）
-└── README.md               # 本文档
+├── README.md               # 本文档
+└── GUI_README.md           # GUI 使用说明（新增）
 ```
 
 ## 快速开始
@@ -38,54 +42,52 @@ pip install -r requirements.txt
 
 ### 2. 配置 API Key
 
-设置环境变量（根据你使用的大模型）:
-
-**Linux/macOS:**
-```bash
-export OPENAI_API_KEY="your-api-key-here"
-```
+**推荐使用通义千问（Qwen）:**
 
 **Windows (PowerShell):**
 ```powershell
-$env:OPENAI_API_KEY="your-api-key-here"
+$env:DASHSCOPE_API_KEY="your-api-key-here"
 ```
 
 **Windows (CMD):**
 ```cmd
-set OPENAI_API_KEY=your-api-key-here
+set DASHSCOPE_API_KEY=your-api-key-here
 ```
 
-### 3. 完成 LLM 接口实现
-
-打开 `src/llm_interface.py`，实现 `natural_language_to_command` 函数。
-
-**示例实现（使用 OpenAI）:**
-
-```python
-def natural_language_to_command(self, user_input: str, context: List[Dict] = None, system_info: Dict = None) -> Dict:
-    from openai import OpenAI
-
-    client = OpenAI(api_key=self.config.api_key)
-
-    system_prompt = self._build_system_prompt(system_info)
-    user_prompt = self._build_user_prompt(user_input, context)
-
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.3
-    )
-
-    result_text = response.choices[0].message.content
-    return parse_llm_json_response(result_text)
+**Linux/macOS:**
+```bash
+export DASHSCOPE_API_KEY="your-api-key-here"
 ```
+
+> 💡 **获取通义千问 API Key**: 访问 https://dashscope.aliyun.com/ 注册并获取免费 API Key
+> 
+> 📖 **详细配置说明**: 查看 [QWEN_SETUP.md](QWEN_SETUP.md)
+
+**或使用其他大模型（需修改代码）:**
+```bash
+export OPENAI_API_KEY="your-api-key-here"
+```
+
+### 3. 测试配置
+
+运行测试脚本验证配置是否正确：
+
+```bash
+python test_qwen.py
+```
+
+如果所有测试通过，说明配置成功！
+
+> ✅ **通义千问接口已实现**: `src/llm_interface.py` 已经完成了通义千问的集成，可以直接使用
 
 ### 4. 运行程序
 
-**交互模式（推荐）:**
+**GUI 模式（推荐用于演示）:**
+```bash
+python run_gui.py
+```
+
+**命令行交互模式:**
 ```bash
 python src/main.py
 ```
@@ -102,7 +104,19 @@ python src/main.py -y 查看系统内存使用情况
 
 ## 使用示例
 
-### 交互模式
+### GUI 模式
+
+启动 GUI 后，你将看到一个现代化的图形界面：
+
+1. 在输入框中输入自然语言描述
+2. 点击"分析命令"按钮
+3. 查看生成的命令和解释
+4. 点击"执行命令"按钮（需要确认）
+5. 在右侧查看历史记录和统计信息
+
+详细使用说明请参考 [GUI_README.md](GUI_README.md)
+
+### 命令行交互模式
 
 ```
 $ python src/main.py
