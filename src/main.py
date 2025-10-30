@@ -87,14 +87,14 @@ class SmartShellAssistant:
 
         while True:
             try:
-                user_input = input("🤖 请输入 > ").strip()
+                user_input = input("请输入 > ").strip()
 
                 if not user_input:
                     continue
 
                 # 处理特殊命令
                 if user_input.lower() in ['exit', 'quit']:
-                    print("👋 再见！")
+                    print("再见！")
                     break
 
                 if user_input.lower() == 'history':
@@ -107,11 +107,11 @@ class SmartShellAssistant:
                     continue
 
                 # 处理自然语言输入
-                print(f"\n🔍 正在分析: {user_input}")
+                print(f"\n正在分析: {user_input}")
                 llm_response = self.process_natural_language(user_input)
 
                 if llm_response.get('error'):
-                    print(f"❌ 错误: {llm_response['error']}")
+                    print(f"错误: {llm_response['error']}")
                     continue
 
                 # 显示生成的命令
@@ -119,58 +119,58 @@ class SmartShellAssistant:
                 explanation = llm_response.get('explanation', '')
                 warnings = llm_response.get('warnings', [])
 
-                print(f"\n💡 建议命令: {command}")
+                print(f"\n建议命令: {command}")
                 if explanation:
-                    print(f"📝 解释: {explanation}")
+                    print(f"解释: {explanation}")
                 if warnings:
-                    print(f"⚠️  警告: {', '.join(warnings)}")
+                    print(f"警告: {', '.join(warnings)}")
 
                 # 执行命令
                 result = self.execute_command(command, auto_execute=False)
 
                 if result['status'] == 'success':
-                    print(f"\n✅ 执行成功:")
+                    print(f"\n执行成功:")
                     print(result['output'])
                 elif result['status'] == 'error':
-                    print(f"\n❌ 执行失败:")
+                    print(f"\n执行失败:")
                     print(result['error'])
                 elif result['status'] == 'cancelled':
-                    print(f"\n⏸️  {result['message']}")
+                    print(f"\n{result['message']}")
 
                 print()
 
             except KeyboardInterrupt:
-                print("\n\n👋 再见！")
+                print("\n\n再见！")
                 break
             except Exception as e:
-                print(f"\n❌ 发生错误: {str(e)}")
+                print(f"\n发生错误: {str(e)}")
                 if self.config.debug:
                     import traceback
                     traceback.print_exc()
 
     def single_command_mode(self, user_input: str, auto_execute: bool = False):
         """单命令模式"""
-        print(f"🔍 正在分析: {user_input}")
+        print(f"正在分析: {user_input}")
         llm_response = self.process_natural_language(user_input)
 
         if llm_response.get('error'):
-            print(f"❌ 错误: {llm_response['error']}")
+            print(f"错误: {llm_response['error']}")
             return
 
         command = llm_response.get('command', '')
         explanation = llm_response.get('explanation', '')
 
-        print(f"\n💡 建议命令: {command}")
+        print(f"\n建议命令: {command}")
         if explanation:
-            print(f"📝 解释: {explanation}")
+            print(f"解释: {explanation}")
 
         if auto_execute:
             result = self.execute_command(command, auto_execute=True)
             if result['status'] == 'success':
-                print(f"\n✅ 执行成功:")
+                print(f"\n执行成功:")
                 print(result['output'])
             elif result['status'] == 'error':
-                print(f"\n❌ 执行失败:")
+                print(f"\n执行失败:")
                 print(result['error'])
 
     def show_history(self, limit: int = 10):
@@ -178,10 +178,10 @@ class SmartShellAssistant:
         records = self.history.get_recent_context(limit=limit)
 
         if not records:
-            print("📭 暂无历史记录")
+            print("暂无历史记录")
             return
 
-        print(f"\n📜 最近 {len(records)} 条历史记录:")
+        print(f"\n最近 {len(records)} 条历史记录:")
         print("-" * 60)
         for i, record in enumerate(records, 1):
             print(f"{i}. 输入: {record.get('user_input', 'N/A')}")

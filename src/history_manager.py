@@ -198,10 +198,10 @@ class HistoryManager:
                         writer.writeheader()
                         writer.writerows(self.history)
 
-            print(f"✅ 历史记录已导出到: {output_file}")
+            print(f"历史记录已导出到: {output_file}")
 
         except IOError as e:
-            print(f"❌ 导出失败: {e}")
+            print(f"导出失败: {e}")
 
 
 def test_history():

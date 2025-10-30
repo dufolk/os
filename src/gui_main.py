@@ -24,6 +24,8 @@ from command_executor import CommandExecutor
 from llm_interface import LLMInterface
 from history_manager import HistoryManager
 from config import Config
+from safety_checker import SafetyChecker
+from visualizer import CommandVisualizer
 
 
 class CommandWorker(QThread):
@@ -77,6 +79,7 @@ class SmartShellGUI(QMainWindow):
         self.llm = LLMInterface(self.config)
         self.executor = CommandExecutor(self.config)
         self.history = HistoryManager(self.config)
+        self.safety_checker = SafetyChecker()
         
         self.current_command = ""
         self.llm_worker = None
@@ -103,7 +106,7 @@ class SmartShellGUI(QMainWindow):
         main_layout.setContentsMargins(15, 15, 15, 15)
         
         # 标题
-        title_label = QLabel("🤖 智能 Shell 助手")
+        title_label = QLabel("智能 Shell 助手")
         title_font = QFont()
         title_font.setPointSize(18)
         title_font.setBold(True)
@@ -150,18 +153,18 @@ class SmartShellGUI(QMainWindow):
         # 按钮区域
         button_layout = QHBoxLayout()
         
-        self.analyze_btn = QPushButton("🔍 分析命令")
+        self.analyze_btn = QPushButton("分析命令")
         self.analyze_btn.setMinimumHeight(35)
         self.analyze_btn.clicked.connect(self.on_analyze_clicked)
         button_layout.addWidget(self.analyze_btn)
         
-        self.execute_btn = QPushButton("▶️ 执行命令")
+        self.execute_btn = QPushButton("执行命令")
         self.execute_btn.setMinimumHeight(35)
         self.execute_btn.setEnabled(False)
         self.execute_btn.clicked.connect(self.on_execute_clicked)
         button_layout.addWidget(self.execute_btn)
         
-        self.clear_btn = QPushButton("🗑️ 清空")
+        self.clear_btn = QPushButton("清空")
         self.clear_btn.setMinimumHeight(35)
         self.clear_btn.clicked.connect(self.on_clear_clicked)
         button_layout.addWidget(self.clear_btn)
@@ -182,15 +185,12 @@ class SmartShellGUI(QMainWindow):
         
         left_layout.addWidget(command_group)
         
-        # 输出区域
-        output_group = QGroupBox("执行结果")
+        # 输出区域 - 使用可视化组件
+        output_group = QGroupBox("执行结果可视化")
         output_layout = QVBoxLayout(output_group)
         
-        self.output_text = QTextEdit()
-        self.output_text.setReadOnly(True)
-        output_font = QFont("Consolas", 9)
-        self.output_text.setFont(output_font)
-        output_layout.addWidget(self.output_text)
+        self.visualizer = CommandVisualizer()
+        output_layout.addWidget(self.visualizer)
         
         left_layout.addWidget(output_group)
         
@@ -212,11 +212,11 @@ class SmartShellGUI(QMainWindow):
         # 历史记录按钮
         history_btn_layout = QHBoxLayout()
         
-        self.refresh_history_btn = QPushButton("🔄 刷新")
+        self.refresh_history_btn = QPushButton("刷新")
         self.refresh_history_btn.clicked.connect(self.load_history)
         history_btn_layout.addWidget(self.refresh_history_btn)
         
-        self.clear_history_btn = QPushButton("🗑️ 清空历史")
+        self.clear_history_btn = QPushButton("清空历史")
         self.clear_history_btn.clicked.connect(self.on_clear_history_clicked)
         history_btn_layout.addWidget(self.clear_history_btn)
         
@@ -238,7 +238,7 @@ class SmartShellGUI(QMainWindow):
         self.stats_text.setReadOnly(True)
         stats_layout.addWidget(self.stats_text)
         
-        refresh_stats_btn = QPushButton("🔄 刷新统计")
+        refresh_stats_btn = QPushButton("刷新统计")
         refresh_stats_btn.clicked.connect(self.update_statistics)
         stats_layout.addWidget(refresh_stats_btn)
         
@@ -368,7 +368,8 @@ class SmartShellGUI(QMainWindow):
         
         if result.get('error'):
             self.status_bar.showMessage(f"错误: {result['error']}")
-            self.command_display.setPlainText(f"❌ 错误: {result['error']}")
+            self.command_display.setPlainText(f"错误: {result['error']}")
+            self.command_display.setStyleSheet("color: #f44336;")
             return
         
         command = result.get('command', '')
@@ -377,16 +378,32 @@ class SmartShellGUI(QMainWindow):
         
         self.current_command = command
         
+        # 安全检查
+        safety_level, safety_desc, safety_color = self.safety_checker.check_safety(command)
+        safety_tips = self.safety_checker.get_safety_tips(command)
+        
         # 显示命令
         display_text = f"命令: {command}\n"
+        display_text += f"\n{safety_desc}\n"
+        display_text += f"提示: {safety_tips}\n"
+        
         if explanation:
             display_text += f"\n解释: {explanation}\n"
         if warnings:
-            display_text += f"\n⚠️ 警告: {', '.join(warnings)}\n"
+            display_text += f"\n警告: {', '.join(warnings)}\n"
         
         self.command_display.setPlainText(display_text)
+        
+        # 根据安全等级设置背景色
+        if safety_level == 'high':
+            self.command_display.setStyleSheet("background-color: #ffebee; border: 2px solid #f44336;")
+        elif safety_level == 'medium':
+            self.command_display.setStyleSheet("background-color: #fff3e0; border: 2px solid #ff9800;")
+        else:
+            self.command_display.setStyleSheet("background-color: #e8f5e9; border: 2px solid #4caf50;")
+        
         self.execute_btn.setEnabled(True)
-        self.status_bar.showMessage("分析完成，可以执行命令")
+        self.status_bar.showMessage(f"分析完成 - {safety_desc}")
 
     def on_llm_error(self, error_msg):
         """LLM 调用出错"""
@@ -433,12 +450,18 @@ class SmartShellGUI(QMainWindow):
             result=result
         )
         
-        # 显示结果
+        # 使用可视化组件显示结果
         if result['status'] == 'success':
-            self.output_text.setPlainText(f"✅ 执行成功\n\n{result['output']}")
+            self.visualizer.visualize_output(
+                self.current_command,
+                result['output'],
+                result['status']
+            )
             self.status_bar.showMessage("命令执行成功")
         else:
-            self.output_text.setPlainText(f"❌ 执行失败\n\n{result['error']}")
+            # 错误时显示文本
+            error_output = f"执行失败\n\n{result['error']}"
+            self.visualizer.text_output.setPlainText(error_output)
             self.status_bar.showMessage("命令执行失败")
         
         # 刷新历史记录
@@ -456,7 +479,8 @@ class SmartShellGUI(QMainWindow):
         """清空按钮点击事件"""
         self.input_text.clear()
         self.command_display.clear()
-        self.output_text.clear()
+        self.command_display.setStyleSheet("")  # 重置样式
+        self.visualizer.clear()
         self.current_command = ""
         self.execute_btn.setEnabled(False)
         self.status_bar.showMessage("已清空")
@@ -473,8 +497,8 @@ class SmartShellGUI(QMainWindow):
             status = record.get('status', 'unknown')
             
             # 格式化显示
-            status_icon = "✅" if status == "success" else "❌"
-            item_text = f"{status_icon} {user_input[:30]}..."
+            status_text = "[成功]" if status == "success" else "[失败]"
+            item_text = f"{status_text} {user_input[:30]}..."
             
             item = QListWidgetItem(item_text)
             item.setData(Qt.ItemDataRole.UserRole, record)
@@ -484,14 +508,20 @@ class SmartShellGUI(QMainWindow):
         """历史记录项点击事件"""
         record = item.data(Qt.ItemDataRole.UserRole)
         
-        # 显示详细信息
+        # 在命令显示区显示历史命令信息
         details = f"时间: {record.get('timestamp', 'N/A')}\n"
         details += f"输入: {record.get('user_input', 'N/A')}\n"
         details += f"命令: {record.get('command', 'N/A')}\n"
-        details += f"状态: {record.get('status', 'N/A')}\n"
-        details += f"\n输出:\n{record.get('output', 'N/A')}"
+        details += f"状态: {record.get('status', 'N/A')}"
+        self.command_display.setPlainText(details)
         
-        self.output_text.setPlainText(details)
+        # 使用可视化组件显示输出
+        if record.get('output'):
+            self.visualizer.visualize_output(
+                record.get('command', ''),
+                record.get('output', ''),
+                record.get('status', 'unknown')
+            )
 
     def on_clear_history_clicked(self):
         """清空历史记录"""
@@ -526,8 +556,8 @@ class SmartShellGUI(QMainWindow):
             for record in stats['recent_commands'][:5]:
                 cmd = record.get('command', 'N/A')
                 status = record.get('status', 'unknown')
-                status_icon = "✅" if status == "success" else "❌"
-                stats_text += f"  {status_icon} {cmd}\n"
+                status_text = "[成功]" if status == "success" else "[失败]"
+                stats_text += f"  {status_text} {cmd}\n"
         
         self.stats_text.setPlainText(stats_text)
 
